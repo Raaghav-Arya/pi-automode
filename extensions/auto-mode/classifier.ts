@@ -30,6 +30,30 @@ import type {
   EffectiveConfig,
 } from "./types.ts";
 
+
+export type SessionMode = "plan" | "normal";
+
+/** Latest omp `mode_change` entry decides the mode; `plan` means plan mode is active. */
+export function currentSessionMode(ctx: ExtensionContext): SessionMode {
+  const entries = ctx.sessionManager.getBranch() as Array<{
+    type?: string;
+    mode?: string;
+  }>;
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const entry = entries[i];
+    if (entry?.type !== "mode_change") continue;
+    if (entry.mode === "plan") return "plan";
+    if (entry.mode === "none" || entry.mode === "plan_paused") return "normal";
+  }
+  return "normal";
+}
+
+const PLAN_MODE_NOTICE =
+  `The user is in PLAN MODE. The agent must only explore: reads, searches, and read-only commands are expected. Writing or editing the plan file is expected. Any other file write, edit, delete, install, commit, push, or state-changing command violates the user's current mode: block it as soft_deny and say that plan mode forbids it, so the agent can explain this to the user. Read-only actions follow the normal rules.`;
+
+const NORMAL_MODE_NOTICE =
+  `The user is in NORMAL MODE. Apply the standard rules.`;
+
 export function buildClassifierPrompt(config: EffectiveConfig): string {
   return CLASSIFIER_SYSTEM_PROMPT.replace(
     "<ENVIRONMENT>",
@@ -871,7 +895,10 @@ export const defaultClassifyAction: ClassifyAction = async (
     maxUserTokens: config.maxUserTranscriptTokens,
     maxToolTokens: config.maxToolTranscriptTokens,
   });
-  const contextText = `<loaded-project-instructions>\n${
+  const mode = currentSessionMode(ctx);
+  const contextText = `<session-mode>\n${mode}: ${
+    mode === "plan" ? PLAN_MODE_NOTICE : NORMAL_MODE_NOTICE
+  }\n</session-mode>\n\n<loaded-project-instructions>\n${
     loadedContext || "(none)"
   }\n</loaded-project-instructions>\n\n<classifier-transcript>\n${
     transcript || "(none)"
