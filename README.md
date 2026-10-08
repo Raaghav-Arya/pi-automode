@@ -10,11 +10,22 @@ Pi-automode does not guard user `!` or `!!` shell commands. It guards only agent
 
 ## Compatibility
 
-Pi-automode supports Pi and Oh My Pi (OMP) 18. It automatically uses OMP's legacy completion API. The integration needs no OMP-specific configuration.
+Pi-automode supports Pi and Oh My Pi (OMP) 18. It automatically uses OMP's legacy completion API.
+
+This fork adds two OMP-specific changes:
+
+- **Plan-mode awareness.** The classifier reads OMP's latest `mode_change` session entry and receives a `<session-mode>` block saying `plan` or `normal`. In plan mode it blocks any action beyond reading and writing the plan file, and the block reason names plan mode. Auto mode and plan mode remain independent toggles.
+- **OMP config path.** The global config is `~/.omp/agent/automode.json`, not a path under `~/.pi`. Project-local `.pi/automode.local.json` is unchanged.
 
 ## Install
 
-From npm:
+From this fork on OMP:
+
+```bash
+omp plugin install "git+https://github.com/Raaghav-Arya/pi-automode.git#omp-plan-mode-awareness"
+```
+
+From upstream npm (no plan-mode awareness, global config under `~/.pi`):
 
 ```bash
 pi install npm:@czottmann/pi-automode
@@ -43,8 +54,8 @@ pi -e ./extensions/auto-mode.ts
 /automode defaults  # print the built-in rule lists
 /automode config    # effective config, resolved log file path, + diagnostics
 /automode denials   # denial history for this session
-/automode model     # open classifier model selector and save to ~/.pi/agent/extensions/pi-automode/config.json
-/automode model provider/model-id # save classifier model to ~/.pi/agent/extensions/pi-automode/config.json
+/automode model     # open classifier model selector and save to ~/.omp/agent/automode.json
+/automode model provider/model-id # save classifier model to ~/.omp/agent/automode.json
 ```
 
 `/auto-mode` is an alias.

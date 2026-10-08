@@ -6,7 +6,7 @@ Logging is off by default. Logging fails open, so a write error never changes an
 
 ## Enabling
 
-Set `autoMode.log` in a Pi-owned configuration source. These sources include `~/.pi/agent/extensions/pi-automode/config.json`, trusted `.pi/automode.local.json`, and `PI_AUTOMODE_SETTINGS_JSON`.
+Set `autoMode.log` in a Pi-owned configuration source. These sources include `~/.omp/agent/automode.json`, trusted `.pi/automode.local.json`, and `PI_AUTOMODE_SETTINGS_JSON`.
 
 ```json
 {

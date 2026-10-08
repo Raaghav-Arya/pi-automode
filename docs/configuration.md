@@ -4,11 +4,11 @@ The extension follows the documented Claude Code configuration model where Pi su
 
 It reads `autoMode` only from Pi-owned configuration sources:
 
-- `~/.pi/agent/extensions/pi-automode/config.json`
+- `~/.omp/agent/automode.json`
 - `.pi/automode.local.json` for trusted projects
 - `PI_AUTOMODE_SETTINGS_JSON`
 
-At startup, pi-automode moves a legacy `~/.pi/agent/automode.json` file to the new global path. If both files exist, it uses the new file and reports the conflict. If migration fails, it uses the legacy file for that session and reports the error.
+At startup, pi-automode moves a legacy `~/.omp/agent/automode.legacy.json` file to the new global path. If both files exist, it uses the new file and reports the conflict. If migration fails, it uses the legacy file for that session and reports the error.
 
 It does not read project configuration until Pi trusts the project. For an untrusted project, it ignores `.pi/automode.local.json` and `.pi/automode.json`. `/automode config` reports each ignored file that exists.
 
@@ -28,7 +28,7 @@ To disable pi-automode for the current project, create or edit `.pi/automode.loc
 
 This file is project-local. Pi reads it only after project trust. Do not commit this file. Shared project `.pi/automode.json` cannot disable auto mode.
 
-Set a global default classifier model in `~/.pi/agent/extensions/pi-automode/config.json`. For a trusted project, override it in `.pi/automode.local.json`.
+Set a global default classifier model in `~/.omp/agent/automode.json`. For a trusted project, override it in `.pi/automode.local.json`.
 
 `classifierReasoningLevel` requests `low`, `medium`, `high`, `xhigh`, or `max` reasoning for both classifier stages. If the key is absent, pi-automode sends no reasoning preference. The server then selects the level.
 
