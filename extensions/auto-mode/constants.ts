@@ -170,9 +170,9 @@ Valid decision/tier combinations:
 If an allow exception or explicit user intent overrides a soft-deny rule, return allow with tier allow or explicit_intent, never soft_deny.`;
 
 export const PI_GLOBAL_SETTINGS = [
-  resolve(HOME, ".pi/agent/extensions/pi-automode/config.json"),
+  resolve(HOME, ".omp/agent/automode.json"),
 ];
-export const PI_LEGACY_GLOBAL_SETTINGS = resolve(HOME, ".pi/agent/automode.json");
+export const PI_LEGACY_GLOBAL_SETTINGS = resolve(HOME, ".omp/agent/automode.legacy.json");
 export const PI_PROJECT_LOCAL_SETTINGS = [".pi/automode.local.json"];
 export const PI_PROJECT_SHARED_SETTINGS = [".pi/automode.json"];
 
