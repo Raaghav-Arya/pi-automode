@@ -694,6 +694,23 @@ export function createPiAutomode(options: PiAutomodeOptions = {}) {
         }
       }
 
+      // OMP plan approval: plan mode asks the user to approve by writing the plan slug to
+      // `xd://propose`. It runs no command and changes no files, so it is allowed in every mode.
+      if (
+        event.toolName === "write" &&
+        typeof input.path === "string" &&
+        input.path.trim().toLowerCase() === "xd://propose"
+      ) {
+        return allow(
+          ctx,
+          "omp-plan-propose",
+          "OMP plan approval request (xd://propose)",
+          event.toolName,
+          summary,
+          logCtx,
+        );
+      }
+
       // Deterministic allow tier. It runs after every deterministic denial.
       // Accepted ask rules skip this tier and always reach the classifier.
       if (!askRequiresClassifier) {
