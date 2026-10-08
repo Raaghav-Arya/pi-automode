@@ -8,6 +8,8 @@ It is not a sandbox. Extensions run in the Pi process. A malicious extension can
 
 Pi-automode does not guard user `!` or `!!` shell commands. It guards only agent tool calls. Use it to reduce unsafe autonomous tool use. Do not use it as an OS security boundary.
 
+> **Release branch.** `omp-release` is the install branch for OMP. It carries the same code as `omp-plan-mode-awareness` but drops development files (`.mcp.json`, `.codegraph/`, tests, CI, `AGENTS.md`). A git install checks out the whole repo and ignores `package.json` `files`, so dev-only config such as `.mcp.json` would otherwise be picked up by OMP as an extension MCP server. Develop on `omp-plan-mode-awareness`, then re-cut this branch.
+
 ## Compatibility
 
 Pi-automode supports Pi and Oh My Pi (OMP) 18. It automatically uses OMP's legacy completion API.
@@ -22,7 +24,7 @@ This fork adds two OMP-specific changes:
 From this fork on OMP:
 
 ```bash
-omp plugin install "git+https://github.com/Raaghav-Arya/pi-automode.git#omp-plan-mode-awareness"
+omp plugin install "git+https://github.com/Raaghav-Arya/pi-automode.git#omp-release"
 ```
 
 From upstream npm (no plan-mode awareness, global config under `~/.pi`):

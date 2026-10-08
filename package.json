@@ -18,12 +18,6 @@
     "llm",
     "coding-agent"
   ],
-  "scripts": {
-    "typecheck": "tsc --noEmit",
-    "check": "tsc --noEmit",
-    "build": "tsc --noEmit",
-    "test": "node --import tsx --test tests/*.test.ts"
-  },
   "files": [
     "CHANGELOG.md",
     "docs",
@@ -45,15 +39,6 @@
     "@earendil-works/pi-coding-agent": "*",
     "@earendil-works/pi-tui": "*",
     "typebox": "*"
-  },
-  "devDependencies": {
-    "@earendil-works/pi-ai": "^0.86.0",
-    "@earendil-works/pi-coding-agent": "^0.86.0",
-    "@earendil-works/pi-tui": "^0.86.0",
-    "@types/node": "^24.0.0",
-    "tsx": "^4.22.4",
-    "typebox": "^1.3.10",
-    "typescript": "^5.8.0"
   },
   "dependencies": {
     "unbash": "4.0.10"
