@@ -57,12 +57,9 @@ test("automode exposes one read-only inspection tool", () => {
 	assert.deepEqual([...fake.commands.keys()], ["automode", "auto-mode"]);
 });
 
-test("global config path uses the extension data directory", () => {
-	assert.match(
-		PI_GLOBAL_SETTINGS[0] ?? "",
-		/\.pi\/agent\/extensions\/pi-automode\/config\.json$/,
-	);
-	assert.match(PI_LEGACY_GLOBAL_SETTINGS, /\.pi\/agent\/automode\.json$/);
+test("global config path is under the OMP agent directory", () => {
+	assert.match(PI_GLOBAL_SETTINGS[0] ?? "", /\.omp\/agent\/automode\.json$/);
+	assert.match(PI_LEGACY_GLOBAL_SETTINGS, /\.omp\/agent\/automode\.legacy\.json$/);
 });
 
 test("importing the extension does not migrate global config", () => {
@@ -716,7 +713,12 @@ test("shared project permissions.allow is ignored with a diagnostic", () => {
 			JSON.stringify({ permissions: { allow: ["bash(git status*)"], deny: ["bash(rm -rf *)"] } }),
 		);
 
-		const { config, diagnostics } = loadEffectiveConfigWithDiagnostics(project, true);
+		// Isolated global path: the default is the developer's real ~/.omp config.
+		const { config, diagnostics } = loadEffectiveConfigWithDiagnostics(
+			project,
+			true,
+			join(project, "missing-global-config.json"),
+		);
 
 		assert.equal(
 			config.permissionAllow.some((pattern) => pattern.raw === "bash(git status*)"),

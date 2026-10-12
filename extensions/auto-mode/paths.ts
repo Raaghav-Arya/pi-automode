@@ -15,7 +15,17 @@ import {
   resolve,
 } from "node:path";
 import { fileURLToPath } from "node:url";
-import { HOME, PATH_BEARING_TOOLS, PROFILE_FILES } from "./constants.ts";
+import {
+  HOME,
+  PATH_BEARING_TOOLS,
+  PROFILE_FILES,
+  PI_GLOBAL_SETTINGS,
+  PI_LEGACY_GLOBAL_SETTINGS,
+} from "./constants.ts";
+
+const EXTENSION_SOURCE_DIR = normalizeProtectedPathForMatch(
+  resolvePathForPolicy(dirname(fileURLToPath(import.meta.url))) ?? dirname(fileURLToPath(import.meta.url)),
+);
 
 const UNICODE_SPACES = /[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g;
 
@@ -231,11 +241,64 @@ export function isProtectedPath(
   return false;
 }
 
+/**
+ * OMP-specific safety controls: the configured auto-mode config files, OMP
+ * auto-mode/permission extension entries, and this extension's own source.
+ * Path-only (no cwd heuristics), so it is safe to apply to bash operands.
+ */
+export function isOmpSafetyControlPath(path: string): boolean {
+  const lexicalPath = normalizeProtectedPathForMatch(resolve(path));
+  const realPath = normalizeProtectedPathForMatch(
+    resolvePathForPolicy(path) ?? resolve(path),
+  );
+
+  // a. Global config realpath: matches the configured global or legacy settings file
+  for (const f of [...PI_GLOBAL_SETTINGS, PI_LEGACY_GLOBAL_SETTINGS]) {
+    const candidate = normalizeProtectedPathForMatch(resolvePathForPolicy(f) ?? f);
+    if (realPath === candidate) return true;
+  }
+
+  // b, c. Name-based rules run on the path as addressed AND on its realpath, so
+  // a symlinked directory whose target has no `.omp/` segment cannot hide an entry.
+  for (const normalized of new Set([lexicalPath, realPath])) {
+    // b. OMP config files by name: automode*.json directly under .omp/ or .omp/agent/
+    if (
+      /^auto-?mode(?:\..+)?\.json$/.test(basename(normalized)) &&
+      /\/\.omp\/(?:agent\/)?[^/]*$/.test(normalized)
+    ) {
+      return true;
+    }
+
+    // c. OMP extension entries naming auto-mode or a permission system.
+    // auto-mode: any segment under extensions/ naming it. permission: only the
+    // extension entry name (first segment), so nested files like
+    // my-tool/permission.ts stay writable.
+    const ompExtMatch = normalized.match(
+      /\/\.omp\/(?:agent\/)?extensions\/(([^/]+)(?:\/.*)?)$/,
+    );
+    if (
+      ompExtMatch &&
+      (/auto-?mode/.test(ompExtMatch[1]) ||
+        /permission-system|^permissions?(?:\.[^.]+)?$/.test(ompExtMatch[2]))
+    ) {
+      return true;
+    }
+  }
+
+  // d. The running extension's own source directory
+  return realPath === EXTENSION_SOURCE_DIR ||
+    realPath.startsWith(`${EXTENSION_SOURCE_DIR}/`) ||
+    realPath === `${dirname(EXTENSION_SOURCE_DIR)}/auto-mode.ts`;
+}
+
 export function isSafetyControlPath(path: string, cwd: string): boolean {
+  if (isOmpSafetyControlPath(path)) return true;
   const policyPath = resolvePathForPolicy(path) ?? resolve(path);
   const policyCwd = resolvePathForPolicy(cwd) ?? resolve(cwd);
   const normalized = normalizeProtectedPathForMatch(policyPath);
   const file = basename(normalized);
+
+  // Pi rules (unchanged)
   const piAgentRoot = normalizeProtectedPathForMatch(
     resolve(HOME, ".pi/agent"),
   );

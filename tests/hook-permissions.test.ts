@@ -1190,6 +1190,44 @@ test("global Pi extension writes are hard-denied before permissions.allow", asyn
 	assert.match(result.reason ?? "", /safety-control/);
 	assert.equal(harness.classifierCalls, 0);
 });
+test("global OMP auto-mode config write is hard-denied before permissions.allow", async () => {
+	const pattern = parseToolPattern("write(*)");
+	assert.ok(pattern);
+	const harness = await setupHookTest({
+		config: baseConfig({ permissionAllow: [pattern] }),
+		classifier: async () => ({ decision: "allow", tier: "allow", reason: "would allow" }),
+	});
+
+	const result = await harness.emit("tool_call", {
+		toolName: "write",
+		input: {
+			path: join(os.homedir(), ".omp/agent/automode.json"),
+			content: "{}",
+		},
+	}, harness.ctx) as { block?: boolean; reason?: string };
+
+	assert.equal(result.block, true);
+	assert.match(result.reason ?? "", /safety-control/);
+	assert.equal(harness.classifierCalls, 0);
+});
+
+test("ordinary OMP extension write reaches the classifier when not hard-denied", async () => {
+	const harness = await setupHookTest({
+		config: baseConfig({}),
+		classifier: async () => ({ decision: "allow", tier: "allow", reason: "ok" }),
+	});
+
+	const result = await harness.emit("tool_call", {
+		toolName: "write",
+		input: {
+			path: join(os.homedir(), ".omp/agent/extensions/my-tool.ts"),
+			content: "export default {};\n",
+		},
+	}, harness.ctx) as { block?: boolean; reason?: string };
+
+	assert.equal(result, undefined);
+	assert.equal(harness.classifierCalls, 1);
+});
 
 test("permissions.allow does not cover case-variant protected writes", async () => {
 	const pattern = parseToolPattern("write(*)");

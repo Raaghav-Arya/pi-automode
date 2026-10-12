@@ -9,6 +9,7 @@ import {
 } from "./bash.ts";
 import { HOME } from "./constants.ts";
 import {
+  isOmpSafetyControlPath,
   isProfileOrAuthorizedKeysPath,
   isSafetyControlPath,
   resolveInputPath,
@@ -359,6 +360,15 @@ function segmentHardDeny(
     }
   }
 
+  // Commands that write files. Three layers:
+  // 1. Raw-text regex for Pi paths (unchanged behavior).
+  // 2. Interpreters (python, node, ...): the target path usually sits inside an
+  //    inline script string, not in an operand, so match OMP names in the raw text.
+  // 3. Resolved write targets checked against OMP safety-control paths. This
+  //    catches `..`, `.`, symlinks, and case variants that raw text cannot.
+  //    Read-only operands are not checked: `cp SRC DEST` writes only DEST and
+  //    `sed` writes only with -i, so reading auto-mode config stays allowed.
+  const interpreters = ["python", "python3", "node", "perl", "ruby"];
   if (
     [
       "tee",
@@ -367,19 +377,39 @@ function segmentHardDeny(
       "rm",
       "unlink",
       "truncate",
-      "python",
-      "python3",
-      "node",
-      "perl",
-      "ruby",
+      ...interpreters,
       "sd",
       "sed",
-    ].includes(name) &&
-    /\.pi\/automode|\.pi\/extensions|pi-automode|auto-mode\.json/i.test(
-      segment.raw,
-    )
+    ].includes(name)
   ) {
-    return "auto-mode or permission safety-control modification is hard-denied";
+    if (
+      /\.pi\/automode|\.pi\/extensions|pi-automode|auto-mode\.json/i.test(
+        segment.raw,
+      )
+    ) {
+      return "auto-mode or permission safety-control modification is hard-denied";
+    }
+    if (
+      interpreters.includes(name) &&
+      /\.omp\/(?:agent\/)?auto-?mode|\.omp\/(?:agent\/)?extensions\/[^\s'"]*(?:auto-?mode|permission-system)/i
+        .test(segment.raw)
+    ) {
+      return "auto-mode or permission safety-control modification is hard-denied";
+    }
+    const operands = args.filter((arg) => !arg.startsWith("-"));
+    let writeTargets: string[] = [];
+    if (name === "cp") writeTargets = operands.slice(-1);
+    else if (name === "sed") {
+      if (lowerArgs.some((arg) => /^-[^-]*i|^--in-place/.test(arg))) {
+        writeTargets = operands;
+      }
+    } else if (!interpreters.includes(name)) writeTargets = operands;
+    for (const arg of writeTargets) {
+      const path = shellPathTokenToPath(arg, cwd);
+      if (path && isOmpSafetyControlPath(path)) {
+        return "auto-mode or permission safety-control modification is hard-denied";
+      }
+    }
   }
 
   return undefined;
@@ -401,10 +431,11 @@ export function deterministicHardDeny(
     const path = resolveInputPath(cwd, input.path);
     if (!path) return undefined;
     const policyPath = resolvePathForPolicy(path) ?? path;
-    const policyCwd = resolvePathForPolicy(cwd) ?? cwd;
     const profileReason = isProfileOrAuthorizedKeysPath(policyPath);
     if (profileReason) return profileReason;
-    if (isSafetyControlPath(policyPath, policyCwd)) {
+    // Pass the path as addressed: isSafetyControlPath resolves symlinks itself
+    // and the OMP name rules also need the pre-resolution spelling.
+    if (isSafetyControlPath(path, cwd)) {
       return "auto-mode or permission safety-control modification is hard-denied";
     }
   }
@@ -424,9 +455,27 @@ export function deterministicHardDeny(
       return "auto-mode or permission safety-control modification is hard-denied";
     }
   }
+  // Track `cd` so relative operands and redirects after it resolve where the
+  // shell would resolve them (`cd ~/.omp/agent && echo > automode.json`).
+  // Scope is not modelled: a `cd` inside a subshell is treated as if it persisted,
+  // which can only add denials. The original cwd is always checked too.
+  let shellCwd = cwd;
   for (const segment of analysis.commands) {
-    const reason = segmentHardDeny(segment, cwd);
+    const reason = segmentHardDeny(segment, cwd) ??
+      (shellCwd === cwd ? undefined : segmentHardDeny(segment, shellCwd));
     if (reason) return reason;
+    if (segment.effectiveCommand.name === "cd" && !segment.dynamic) {
+      // `cd [-LP] [--] DIR`: the directory is the last non-option word.
+      const { args, argTexts } = segment.effectiveCommand;
+      let index = args.length - 1;
+      while (index >= 0 && args[index]?.startsWith("-") && args[index] !== "-") {
+        index--;
+      }
+      const dir = index < 0
+        ? undefined
+        : shellPathTokenToPath(args[index]!, shellCwd, argTexts[index]);
+      if (dir) shellCwd = dir;
+    }
   }
   return undefined;
 }

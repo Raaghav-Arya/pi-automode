@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ## Bug fixes
 
+- **OMP self-configuration** — Stop blocking OMP self-improvement. Reading OMP documentation and source, creating extensions and skills under `~/.omp` or `./.omp`, and reading `~/.omp` config are no longer hard-denied. Hard-deny now targets only auto-mode behavior and its safety controls: `~/.omp/agent/automode.json` (also through symlinks), `automode*.json` under `.omp/`, OMP extension entries named `auto-mode`, `permission-system`, or `permissions`, and this extension's source. Bash write targets, relative targets after `cd`, and inline interpreter scripts are checked. Other indirect forms (`ln`, `install`, `dd`, wildcards, removing a parent directory) are left to the classifier. The classifier policy gains self-inspection and self-customization allow rules and a sharper tampering hard-deny rule. Existing `~/.pi` and `.pi` rules are unchanged.
 - **System-wide delete checks** — Block recursive deletion of `/Users` and its subdirectories. Check the search root after `find -H`, `-L`, or `-P` before `-delete`.
 - **Codex classifier shutdown** — Codex classifier requests no longer keep session WebSockets. This lets `pi -p` exit after classification. These requests no longer reuse the prompt cache. (#60)
 
