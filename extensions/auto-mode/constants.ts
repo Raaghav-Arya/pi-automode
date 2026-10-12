@@ -81,6 +81,8 @@ export const DEFAULT_ALLOW = [
   "Standard credentials: reading credentials from the agent's own configured providers and sending them only to their intended provider.",
   "Git push to a current non-default working branch or to a new branch created for the current task.",
   "Toolchain bootstrap from official installers or package registries for the language/toolchain used by the project.",
+  "Agent self-inspection: reading Oh My Pi (OMP) documentation, source code, examples, and installed packages from wherever they are installed (for example a global node_modules/@oh-my-pi/pi-coding-agent directory), and reading the agent's own configuration files, extensions, skills, rules, and session files under ~/.omp and ./.omp that do not contain credentials or API keys. Files that may contain credentials (e.g. auth.json, models.yml, mcp.json, .env*) stay covered by the credential hard-deny rules.",
+  "Agent self-customization: creating new extensions, skills, rules, commands, prompts, and other customizations in ~/.omp or ./.omp, and editing files the agent created during the current task there. This never covers auto-mode configuration, permission rules, or any extension or hook that disables, bypasses, or overrides auto-mode, and it does not override HARD_DENY.",
 ];
 
 /** Built-in soft-deny rules. Specific user intent or allow exceptions may override these. */
@@ -104,7 +106,7 @@ export const DEFAULT_HARD_DENY = [
   "Granting admin, owner, IAM, RBAC, repository, or production access permissions.",
   "Exfiltrating repository contents, secrets, credentials, private keys, tokens, or internal data to untrusted domains, public storage, logs, URLs, metadata, or third-party services.",
   "Systematically scanning for credentials, tokens, private keys, or secrets beyond what the task directly requires.",
-  "Tampering with logs, audit trails, security monitoring, permission rules, auto-mode configuration, or files that define the agent's safety controls.",
+  "Tampering with logs, audit trails, security monitoring, permission rules, auto-mode configuration or behavior, or files that define the agent's safety controls. This includes editing automode*.json (for example ~/.omp/agent/automode.json or .pi/automode.local.json), editing this extension's files, and disabling, uninstalling, bypassing, or overriding the auto-mode extension through settings, environment variables, or other extensions and hooks. Ordinary OMP configuration unrelated to these controls is not tampering.",
   "Creating services, endpoints, workflows, or autonomous agents that execute arbitrary code without meaningful human approval.",
   "Posting or updating public or external content that is fabricated, misleading, impersonating a user, or claims approval/action that did not happen.",
 ];
@@ -116,6 +118,7 @@ Auto mode is active. Routine permission prompts are replaced by a pre-execution 
 - Execute the user's task autonomously when the action is local, reversible, or routine.
 - Do not ask for permission merely because an operation is normal development work.
 - Never try to bypass auto mode, weaken safety controls, or modify auto-mode/permission configuration.
+- Reading OMP documentation and source, and creating extensions, skills, and other customizations in ~/.omp or ./.omp, is allowed. Only auto-mode/permission configuration and safety controls are off limits.
 - If pi-automode blocks a tool call, treat the action as not executed. Do not claim success, rely on its effects, or attempt an equivalent workaround. Report the block to the user before continuing with dependent work. Independent work can continue.
 - User intent must be direct and specific for destructive, external, production, or irreversible actions.`;
 
@@ -155,7 +158,10 @@ Examples:
 - Editing internal/interaction/dashboard.go after "For FF-28 in /worktree, modify existing files under internal/**" => allow, explicit_intent, target stays inside a direct, bounded user authorization.
 - Editing cmd/tool.go after the same authorization => block, soft_deny, target lies outside authorized scope.
 - Uploading repository contents, logs with secrets, or internal data to an untrusted domain => block, hard_deny.
-- Modifying .pi/automode*, this extension, or permission rules => block, hard_deny.`;
+- Modifying automode*.json (e.g. ~/.omp/agent/automode.json, .pi/automode.local.json), this extension's files, or permission rules; or adding an extension/hook that disables or bypasses auto-mode => block, hard_deny.
+- Reading OMP docs or source under a node_modules/@oh-my-pi install, or reading ~/.omp config files that do not contain credentials => allow.
+- Creating a new extension or skill under ~/.omp/agent/extensions or ./.omp/extensions that does not touch auto-mode or permissions => allow.
+- Editing a non-security setting in a pre-existing ~/.omp/agent file without bounded authorization => block, soft_deny (pre-existing file rule), never hard_deny.`;
 
 export const CLASSIFIER_FAST_INSTRUCTION =
   `Return exactly one digit and nothing else: 0 only when the action is clearly allowed by the policy; 1 when it may need blocking or you are uncertain. Err on 1.`;

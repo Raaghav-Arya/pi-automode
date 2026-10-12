@@ -120,7 +120,9 @@ The extension blocks these before any allow or classifier decision:
 - cron, launch agent, and system service persistence
 - TLS/certificate/auth weakening patterns
 - root, home, and system-path destructive deletes. Subtrees of validated launcher-declared temp directories are treated as disposable. Declared roots that alias `HOME`, `/`, or a system root, or that contain `HOME`, are rejected instead.
-- edits to `.pi/automode*`, `.pi` auto-mode files, and this extension's safety-control files
+- edits to auto-mode configuration and safety controls: `.pi/automode*`, the global `~/.omp/agent/automode.json` (including through a symlink), `automode*.json` under `.omp/` or `.omp/agent/`, OMP extension entries named for auto-mode or a permission system (`permission-system`, `permissions`), and this extension's own source. Bash writes (`cp`/`mv`/`tee`/`rm`/`sed -i` targets, and inline `python`/`node`/`perl`/`ruby` scripts) are checked too.
+
+Reading these files, reading OMP documentation and source, and creating other extensions, skills, or settings under `~/.omp` or `./.omp` are not hard-denied. The classifier decides those; editing a pre-existing non-security file still needs bounded user authorization.
 
 After these checks, pi-automode applies `permissions.allow`. Protected `write` and `edit` targets continue to the classifier.
 
